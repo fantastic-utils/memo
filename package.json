@@ -1,0 +1,46 @@
+{
+  "name": "@fantastic-utils/memo",
+  "version": "0.0.1",
+  "description": "powerful memorization lib, which inspired by memoize-one, proxy-memoize",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "scripts": {
+    "dev": "father dev",
+    "test": "jest",
+    "build": "father build",
+    "prepublishOnly": "father doctor && npm run build"
+  },
+  "keywords": [
+    "proxy",
+    "memoize",
+    "memoize-one",
+    "proxy-memoize",
+    "async-memoize-one",
+    "proxy-compare",
+    "memo"
+  ],
+  "authors": [
+    "zsney.lzhou@gmail.com"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist",
+    "compiled"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-runtime": "^7.19.6",
+    "@babel/preset-env": "^7.20.2",
+    "@types/jest": "^29.2.5",
+    "babel-jest": "^29.4.3",
+    "father": "^4.1.2",
+    "jest": "^29.3.1",
+    "ts-jest": "^29.0.3"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.21.0",
+    "@fantastic-utils/data-type": "^1.0.2"
+  }
+}
