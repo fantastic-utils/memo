@@ -26,7 +26,7 @@ npm install @fantastic-utils/memo
 this library contains `memo` and `memoAsync`.
 
 ```javascript
-import { memo, memoAsync } from '@fantastic-utils/memo';
+import { memo, memoAsync, original } from '@fantastic-utils/memo';
 
 // Basic cache
 const add = (a, b) => a + b;
@@ -53,13 +53,23 @@ const obj = { a: 1 };
 memoAdd(obj, 2); // 3
 obj.a = 2;
 memoAdd(obj, 2); // 3 from cache
+
+// console log raw data, as argument is wrapped by proxy
+const add = (objA, b) => {
+  console.log(original(objA));
+  return objA.a + b;
+};
 ```
 
 ### Reference
 
 ```ts
+// memo function
 memo(fn, memo: MemoConfig): fn
+// async memo function
 memoAsync(fn, memo: MemoConfig): fn
+// Get raw object, as arg are wrapped by proxy
+original(arg): object
 ```
 
 ```ts
@@ -130,6 +140,27 @@ expect(memoAdd).toBeCalledTimes(2); // call twice
 The biggest difference between `shouldCompare` and `isChanged` is that `shouldCompare` control how to use cache, and `isChanged` control how to compare. sometimes `shouldCompare` used to improve performance, and `isChanged` used to customize compare logic.
 
 Please refer to above code see the compare detail.
+
+## Performance compare
+
+Benchmark code pls refer to `__benchmark__` folder.
+
+```bash
+@fantastic-utils/memo deep x 82,670,951 ops/sec ±2.32% (85 runs sampled)
+proxy-memoize deep x 779,043 ops/sec ±3.83% (85 runs sampled)
+memoize-state deep x 22,624,061 ops/sec ±1.82% (81 runs sampled)
+
+Fastest is @fantastic-utils/memo deep
+```
+
+```bash
+@fantastic-utils/memo shallow x 26,180,311 ops/sec ±1.04% (89 runs sampled)
+proxy-memoize shallow x 1,120,131 ops/sec ±1.29% (86 runs sampled)
+memoize-one shallow x 17,569,314 ops/sec ±1.66% (83 runs sampled)
+memoize-state shallow x 18,697,192 ops/sec ±3.24% (86 runs sampled)
+
+Fastest is @fantastic-utils/memo shallow
+```
 
 ## Develop
 

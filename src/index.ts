@@ -2,7 +2,7 @@ import { getDataType } from '@fantastic-utils/data-type';
 
 const ORIGINAL_SYMBOL = Symbol('_original');
 
-export enum AFFECTED_TYPES {
+enum AFFECTED_TYPES {
   KEYS = 'k',
   HAS_KEY = 'h',
   ALL_KEYS = 'a',
@@ -22,7 +22,7 @@ export interface MemoConfig {
  */
 export interface NormalizeArgCfg {
   t: string;
-  v: unknown;
+  v: any;
   r: unknown;
   a: Affected;
 }
@@ -40,6 +40,7 @@ export type AffectedHasKey = Map<string, HasKeyArgCfg>;
  * @param a The key which used in all keys
  */
 export interface Used {
+  p?: ProxyHandler<any>;
   [AFFECTED_TYPES.KEYS]: AffectedKey;
   [AFFECTED_TYPES.HAS_KEY]: AffectedHasKey;
   [AFFECTED_TYPES.ALL_KEYS]: boolean;
@@ -53,6 +54,15 @@ const defaultShouldCompare = () => true;
 
 export const original = (proxyTarget: any) => proxyTarget[ORIGINAL_SYMBOL];
 
+export const getUsed = (arg: any, affected: Affected) => {
+  let used = affected.get(arg);
+  if (!used) {
+    used = { k: new Map(), h: new Map(), a: false };
+    affected.set(arg, used);
+  }
+  return used;
+};
+
 const createHandler = <T extends object>(
   arg: T,
   memoCfg: MemoConfig,
@@ -65,11 +75,7 @@ const createHandler = <T extends object>(
       const reflectValue = Reflect.get(target, key);
       if (keyType === 'Symbol') return reflectValue;
 
-      let used = affected.get(arg);
-      if (!used) {
-        used = { k: new Map(), h: new Map(), a: false };
-        affected.set(arg, used);
-      }
+      const used = getUsed(arg, affected);
       const affectedKeysMap = used[AFFECTED_TYPES.KEYS];
       const affectedKeyCfg = affectedKeysMap.get(key as string);
       if (affectedKeyCfg) {
@@ -82,11 +88,8 @@ const createHandler = <T extends object>(
     },
     has(target, key) {
       const reflectHas = Reflect.has(target, key);
-      let used = affected.get(arg);
-      if (!used) {
-        used = { k: new Map(), h: new Map(), a: false };
-        affected.set(arg, used);
-      }
+      const used = getUsed(arg, affected);
+
       const affectedHasKeysMap = used[AFFECTED_TYPES.HAS_KEY];
       const affectedHasKeyCfg = affectedHasKeysMap.get(key as string);
       if (affectedHasKeyCfg) {
@@ -117,10 +120,17 @@ const normalizeArgs = (
   switch (dataType) {
     case 'Object':
     case 'Array':
+      const used = getUsed(arg, affected);
+      const selfProxy = used?.p;
+      let proxyValue = selfProxy;
+      if (!proxyValue) {
+        proxyValue = createProxy(arg as object, memoCfg, affected);
+        used.p = proxyValue;
+      }
       return {
         t: dataType,
         r: arg,
-        v: createProxy(arg as object, memoCfg, affected),
+        v: proxyValue,
         a: affected,
       };
     default:
@@ -138,15 +148,14 @@ const isChanged = (
   newArg: any,
   memoCfg: MemoConfig
 ) => {
-  const { t, r, a: affected } = normalizedArg;
+  const { t, r, a: affected, v } = normalizedArg;
   const { objectShallowCompare } = memoCfg;
   if (objectShallowCompare) {
     return !Object.is(r, newArg);
   }
 
   const newArgType = getDataType(newArg);
-  let changed = false;
-
+  console.log(t);
   switch (t) {
     case 'Array':
     case 'Object':
@@ -158,6 +167,7 @@ const isChanged = (
       const affectedKeys = used[AFFECTED_TYPES.KEYS];
       const affectedHasKey = used[AFFECTED_TYPES.HAS_KEY];
 
+      let changed = false;
       for (const [key, hasKeyCfg] of affectedHasKey || []) {
         changed = hasKeyCfg.v !== Reflect.has(newArg, key);
         if (changed) break;
@@ -208,6 +218,22 @@ const getCachedProxyArgCfg = (args: any[], memoCfg: MemoConfig) => {
   return [proxyArgs, cachedProxyArgsCfg];
 };
 
+const untrack = (x: any, seen: Set<unknown>) => {
+  if (['Object', 'Array'].indexOf(getDataType(x)) === -1) return x;
+  const untrackedObj = original(x);
+  if (untrackedObj) {
+    return untrackedObj;
+  }
+  if (!seen.has(x)) {
+    seen.add(x);
+    Object.entries(x).forEach(([k, v]) => {
+      const vv = untrack(v, seen);
+      if (!Object.is(vv, v)) x[k] = vv;
+    });
+  }
+  return x;
+};
+
 export const memo = (
   fn: (...args: any[]) => any,
   memoCfg: MemoConfig = {
@@ -231,8 +257,8 @@ export const memo = (
     [proxyArgs, cachedProxyArgsCfg] = getCachedProxyArgCfg(args, memoCfg);
 
     const rt = fn(...proxyArgs);
-    cachedResult = rt;
-    return rt;
+    cachedResult = untrack(rt, new Set());
+    return cachedResult;
   };
 };
 
@@ -259,7 +285,7 @@ export const memoAsync = (
     [proxyArgs, cachedProxyArgsCfg] = getCachedProxyArgCfg(args, memoCfg);
 
     const rt = await fn(...proxyArgs);
-    cachedResult = rt;
-    return rt;
+    cachedResult = untrack(rt, new Set());
+    return cachedResult;
   };
 };

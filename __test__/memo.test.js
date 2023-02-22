@@ -130,3 +130,35 @@ describe('Async', () => {
     expect(mockAdd).toBeCalledTimes(2);
   });
 });
+
+describe('Return value', () => {
+  test('Return nested proxy object', () => {
+    const obj = { num: { a: 1 } };
+    const mockFn = jest.fn((objA) => ({ newNum: objA.num }));
+    const memoFn = memo(mockFn);
+    expect(memoFn(obj).newNum).toBe(obj.num);
+    expect(memoFn(obj).newNum).toBe(obj.num);
+    expect(mockFn).toBeCalledTimes(1);
+  });
+
+  test('Return nested proxy array', () => {
+    const obj = { num: [1,2,3] };
+    const mockFn = jest.fn((objA) => ({ newNum: objA.num }));
+    const memoFn = memo(mockFn);
+    expect(memoFn(obj).newNum).toBe(obj.num);
+    expect(memoFn(obj).newNum).toBe(obj.num);
+    expect(mockFn).toBeCalledTimes(1);
+  });
+
+  // TODO:
+  // test('Return circular reference object', () => {
+  //   const refObj1 = { a: 1 };
+  //   const refObj = { a: refObj1 };
+  //   const obj = { num: refObj, num2: refObj };
+  //   const mockFn = jest.fn((objA) => ({ newNum: objA.num }));
+  //   const memoFn = memo(mockFn);
+  //   expect(memoFn(obj).newNum).toBe(obj.num);
+  //   expect(memoFn(obj).newNum).toBe(obj.num);
+  //   expect(mockFn).toBeCalledTimes(1);
+  // });
+});
