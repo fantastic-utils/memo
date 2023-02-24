@@ -1,6 +1,6 @@
 {
   "name": "@fantastic-utils/memo",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "powerful memorization lib, which inspired by memoize-one, proxy-memoize",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -10,6 +10,10 @@
     "build": "father build",
     "prebuild": "father prebundle",
     "prepublishOnly": "father doctor && npm run build"
+  },
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/fantastic-utils/memo"
   },
   "keywords": [
     "proxy",

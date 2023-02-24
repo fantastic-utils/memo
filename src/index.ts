@@ -52,6 +52,34 @@ export type PathSet = string;
 
 const defaultShouldCompare = () => true;
 
+// get object prototype
+const getProto = Object.getPrototypeOf;
+
+// Properties that are both non-configurable and non-writable will break
+// the proxy get trap when we try to return a recursive/child compare proxy
+// from them. We can avoid this by making a copy of the target object with
+// all descriptors marked as configurable, see `copyTargetObject`.
+// See: https://github.com/dai-shi/proxy-compare/pull/8
+const needsToCopyTargetObject = (obj: object) =>
+  Object.values(Object.getOwnPropertyDescriptors(obj)).some(
+    (descriptor) => !descriptor.configurable && !descriptor.writable
+  );
+
+// Make a copy with all descriptors marked as configurable.
+const copyTargetObject = <T extends object>(obj: T): T => {
+  if (Array.isArray(obj)) {
+    // Arrays need a special way to copy
+    return Array.from(obj) as T;
+  }
+  // For non-array objects, we create a new object keeping the prototype
+  // with changing all configurable options (otherwise, proxies will complain)
+  const descriptors = Object.getOwnPropertyDescriptors(obj);
+  Object.values(descriptors).forEach((desc) => {
+    desc.configurable = true;
+  });
+  return Object.create(getProto(obj), descriptors);
+};
+
 export const original = (proxyTarget: any) => proxyTarget[ORIGINAL_SYMBOL];
 
 export const getUsed = (arg: any, affected: Affected) => {
@@ -122,14 +150,19 @@ const normalizeArgs = (
     case 'Array':
       const used = getUsed(arg, affected);
       const selfProxy = used?.p;
+      const needCopy = needsToCopyTargetObject(arg);
       let proxyValue = selfProxy;
+      let plainArg = arg;
       if (!proxyValue) {
-        proxyValue = createProxy(arg as object, memoCfg, affected);
+        if (needCopy) {
+          plainArg = copyTargetObject(arg);
+        }
+        proxyValue = createProxy(plainArg as object, memoCfg, affected);
         used.p = proxyValue;
       }
       return {
         t: dataType,
-        r: arg,
+        r: needCopy ? plainArg : arg,
         v: proxyValue,
         a: affected,
       };
@@ -148,14 +181,13 @@ const isChanged = (
   newArg: any,
   memoCfg: MemoConfig
 ) => {
-  const { t, r, a: affected, v } = normalizedArg;
+  const { t, r, a: affected } = normalizedArg;
   const { objectShallowCompare } = memoCfg;
   if (objectShallowCompare) {
     return !Object.is(r, newArg);
   }
 
   const newArgType = getDataType(newArg);
-  console.log(t);
   switch (t) {
     case 'Array':
     case 'Object':
