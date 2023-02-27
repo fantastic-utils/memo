@@ -59,7 +59,6 @@ const getProto = Object.getPrototypeOf;
 // the proxy get trap when we try to return a recursive/child compare proxy
 // from them. We can avoid this by making a copy of the target object with
 // all descriptors marked as configurable, see `copyTargetObject`.
-// See: https://github.com/dai-shi/proxy-compare/pull/8
 const needsToCopyTargetObject = (obj: object) =>
   Object.values(Object.getOwnPropertyDescriptors(obj)).some(
     (descriptor) => !descriptor.configurable && !descriptor.writable

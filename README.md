@@ -61,6 +61,26 @@ const add = (objA, b) => {
 };
 ```
 
+### Use with `React` pure component
+
+```javascript
+import { memo, original } from '@fantastic-utils/memo';
+
+const TestComponent = memo((props) => {
+  // Take care of console.log, as console.log will construct proxy values
+  // use original to get the raw value.
+  // Note that `.detail` will be marked as used
+  console.log(original(props.detail));
+  return (
+    <>
+      <h3>{props.detail.address}</h3>
+    </>
+  );
+});
+
+export default TestComponent;
+```
+
 ### Reference
 
 ```ts

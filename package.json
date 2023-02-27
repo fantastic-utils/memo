@@ -1,6 +1,6 @@
 {
   "name": "@fantastic-utils/memo",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "powerful memorization lib, which inspired by memoize-one, proxy-memoize",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -22,6 +22,8 @@
     "proxy-memoize",
     "async-memoize-one",
     "proxy-compare",
+    "react",
+    "reselect",
     "memo"
   ],
   "authors": [
