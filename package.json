@@ -1,14 +1,13 @@
 {
   "name": "@fantastic-utils/memo",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "powerful memorization lib, which inspired by memoize-one, proxy-memoize",
-  "main": "dist/esm/index.js",
+  "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "scripts": {
     "dev": "father dev",
     "test": "jest",
     "build": "father build",
-    "prebuild": "father prebundle",
     "prepublishOnly": "father doctor && npm run build"
   },
   "repository": {
@@ -52,6 +51,6 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.21.0",
-    "@fantastic-utils/data-type": "^1.0.2"
+    "@fantastic-utils/data-type": "^1.0.3"
   }
 }

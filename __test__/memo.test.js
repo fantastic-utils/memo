@@ -76,6 +76,178 @@ describe('Basic Test', () => {
     expect(memoAdd(obj, '2', 3)).toBe(6);
     expect(mockAdd).toBeCalledTimes(1);
   });
+
+  test('Has symbol key compare', () => {
+    const testObj = {};
+    const symbolKey = Symbol('a');
+    const mockHas = jest.fn((objA) => symbolKey in objA);
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, symbolKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[symbolKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Has string key compare', () => {
+    const testObj = {};
+    const stringKey = 'a';
+    const mockHas = jest.fn((objA) => stringKey in objA);
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, stringKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[stringKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Has own string property key compare', () => {
+    const testObj = {};
+    const stringKey = 'a';
+    const mockHas = jest.fn((objA) => objA.hasOwnProperty(stringKey));
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, stringKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[stringKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Has own symbol property key compare', () => {
+    const testObj = {};
+    const symbolKey = Symbol('a');
+    const mockHas = jest.fn((objA) => objA.hasOwnProperty(symbolKey));
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, symbolKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[symbolKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Has own string key compare', () => {
+    const testObj = {};
+    const stringKey = 'a';
+    const mockHas = jest.fn((objA) => Object.hasOwn(objA, stringKey));
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, stringKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[stringKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Has own symbol key compare', () => {
+    const testObj = {};
+    const symbolKey = Symbol('a');
+    const mockHas = jest.fn((objA) => Object.hasOwn(objA, symbolKey));
+    const memoHas = memo(mockHas);
+
+    expect(Object.hasOwn(testObj, symbolKey)).toBe(false);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    expect(memoHas(testObj)).toBe(false);
+    expect(mockHas).toBeCalledTimes(1);
+
+    testObj[symbolKey] = 'value';
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+
+    expect(memoHas(testObj)).toBe(true);
+    expect(mockHas).toBeCalledTimes(2);
+  });
+
+  test('Own keys via Object.keys', () => {
+    const testObj = {};
+    const mockAllKeys = jest.fn((objA) => Object.keys(objA));
+    const memoAllKeys = memo(mockAllKeys);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(1);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(1);
+
+    testObj.a = 1;
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(2);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(2);
+  });
+
+  test('Own keys via for...in', () => {
+    const testObj = {};
+    const mockAllKeys = jest.fn((objA) => {
+      for (let key in objA) {}
+    });
+    const memoAllKeys = memo(mockAllKeys);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(1);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(1);
+
+    testObj.a = 1;
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(2);
+
+    memoAllKeys(testObj);
+    expect(mockAllKeys).toBeCalledTimes(2);
+  });
 });
 
 describe('Customize Test', () => {

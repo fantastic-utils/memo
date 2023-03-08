@@ -5,6 +5,7 @@ const ORIGINAL_SYMBOL = Symbol('_original');
 enum AFFECTED_TYPES {
   KEYS = 'k',
   HAS_KEY = 'h',
+  HAS_OWN_KEY = 'o',
   ALL_KEYS = 'a',
 }
 
@@ -31,8 +32,16 @@ export interface HasKeyArgCfg {
   v: boolean;
 }
 
-export type AffectedKey = Map<string, NormalizeArgCfg>;
-export type AffectedHasKey = Map<string, HasKeyArgCfg>;
+export interface HasOwnKeyArgCfg {
+  v: boolean;
+}
+
+export type RecordKey = string | symbol;
+
+export type AffectedKey = Map<RecordKey, NormalizeArgCfg>;
+export type AffectedHasKey = Map<RecordKey, HasKeyArgCfg>;
+export type AffectedHasOwnKey = Map<RecordKey, HasOwnKeyArgCfg>;
+export type AffectedAllKey = [boolean, Array<RecordKey>];
 
 /**
  * @param k The key map which used
@@ -43,7 +52,8 @@ export interface Used {
   p?: ProxyHandler<any>;
   [AFFECTED_TYPES.KEYS]: AffectedKey;
   [AFFECTED_TYPES.HAS_KEY]: AffectedHasKey;
-  [AFFECTED_TYPES.ALL_KEYS]: boolean;
+  [AFFECTED_TYPES.HAS_OWN_KEY]: AffectedHasOwnKey;
+  [AFFECTED_TYPES.ALL_KEYS]: AffectedAllKey;
 }
 
 export type Affected = WeakMap<object, Used>;
@@ -84,7 +94,12 @@ export const original = (proxyTarget: any) => proxyTarget[ORIGINAL_SYMBOL];
 export const getUsed = (arg: any, affected: Affected) => {
   let used = affected.get(arg);
   if (!used) {
-    used = { k: new Map(), h: new Map(), a: false };
+    used = {
+      [AFFECTED_TYPES.KEYS]: new Map(),
+      [AFFECTED_TYPES.HAS_KEY]: new Map(),
+      [AFFECTED_TYPES.ALL_KEYS]: [false, []],
+      [AFFECTED_TYPES.HAS_OWN_KEY]: new Map(),
+    };
     affected.set(arg, used);
   }
   return used;
@@ -104,13 +119,13 @@ const createHandler = <T extends object>(
 
       const used = getUsed(arg, affected);
       const affectedKeysMap = used[AFFECTED_TYPES.KEYS];
-      const affectedKeyCfg = affectedKeysMap.get(key as string);
+      const affectedKeyCfg = affectedKeysMap.get(key as RecordKey);
       if (affectedKeyCfg) {
         return affectedKeyCfg.v;
       }
 
       const normalizedArgCfg = normalizeArgs(reflectValue, memoCfg, affected);
-      affectedKeysMap.set(key as string, normalizedArgCfg);
+      affectedKeysMap.set(key as RecordKey, normalizedArgCfg);
       return normalizedArgCfg.v;
     },
     has(target, key) {
@@ -118,12 +133,36 @@ const createHandler = <T extends object>(
       const used = getUsed(arg, affected);
 
       const affectedHasKeysMap = used[AFFECTED_TYPES.HAS_KEY];
-      const affectedHasKeyCfg = affectedHasKeysMap.get(key as string);
+      const affectedHasKeyCfg = affectedHasKeysMap.get(key as RecordKey);
+
       if (affectedHasKeyCfg) {
         return affectedHasKeyCfg.v;
       }
-      affectedHasKeysMap.set(key as string, { v: reflectHas });
+
+      affectedHasKeysMap.set(key as RecordKey, { v: reflectHas });
       return reflectHas;
+    },
+    getOwnPropertyDescriptor(target, key) {
+      const desc = Object.getOwnPropertyDescriptor(target, key);
+      const used = getUsed(arg, affected);
+      const affectedHasOwnKey = used[AFFECTED_TYPES.HAS_OWN_KEY];
+      const affectedHasOwnKeyCfg = affectedHasOwnKey.get(key as RecordKey);
+
+      if (!affectedHasOwnKeyCfg) {
+        affectedHasOwnKey.set(key as RecordKey, { v: !!desc });
+      }
+
+      return desc;
+    },
+    ownKeys(target) {
+      const ownKeys = Reflect.ownKeys(target);
+      const used = getUsed(arg, affected);
+      const [allKeysCalled] = used[AFFECTED_TYPES.ALL_KEYS];
+
+      if (!allKeysCalled) {
+        used[AFFECTED_TYPES.ALL_KEYS] = [true, ownKeys];
+      }
+      return ownKeys;
     },
   };
   return handler;
@@ -197,11 +236,28 @@ const isChanged = (
 
       const affectedKeys = used[AFFECTED_TYPES.KEYS];
       const affectedHasKey = used[AFFECTED_TYPES.HAS_KEY];
+      const affectedHasOwnKey = used[AFFECTED_TYPES.HAS_OWN_KEY];
+      const [allKeysCalled, keys] = used[AFFECTED_TYPES.ALL_KEYS];
 
       let changed = false;
       for (const [key, hasKeyCfg] of affectedHasKey || []) {
         changed = hasKeyCfg.v !== Reflect.has(newArg, key);
         if (changed) break;
+      }
+      if (changed) return true;
+
+      if (allKeysCalled) {
+        const newArgOwnKeys = Reflect.ownKeys(newArg);
+        changed =
+          keys.length !== newArgOwnKeys.length ||
+          keys.some((k, i) => k !== newArgOwnKeys[i]);
+        if (changed) return changed;
+      } else {
+        for (const [key, hasOwnKeyCfg] of affectedHasOwnKey || []) {
+          changed =
+            hasOwnKeyCfg.v !== !!Reflect.getOwnPropertyDescriptor(newArg, key);
+          if (changed) break;
+        }
       }
       if (changed) return true;
 
